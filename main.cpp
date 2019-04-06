@@ -137,7 +137,8 @@ int create_table_advanced()
     "CREATE TABLE generated_data ("  \
     "id             INTEGER PRIMARY KEY     AUTOINCREMENT," \
     "name           TEXT                    NOT NULL," \
-    "number         REAL );";
+    "number         REAL," \
+    "array          BLOB);";
 
     return execute_sql(sql_statement);
 }
@@ -157,7 +158,7 @@ int populate_table_advanced()
     std::cout << std::endl << __PRETTY_FUNCTION__ << std::endl;
     int ret;
     sqlite3_stmt *sql_statement_object = nullptr;
-    const char *sql_statement = "INSERT INTO generated_data (name, number) VALUES (?1, ?2);";
+    const char *sql_statement = "INSERT INTO generated_data (name, number, array) VALUES (?1, ?2, ?3);";
 
     ret = sqlite3_prepare_v2(db_object, sql_statement, -1, &sql_statement_object, nullptr);
     if (ret != SQLITE_OK) {
@@ -178,6 +179,11 @@ int populate_table_advanced()
             return -1;
         }
         ret = sqlite3_bind_double(sql_statement_object, 2, (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX)) * 100000.0);
+        if (ret != SQLITE_OK) {
+            std::cerr << __PRETTY_FUNCTION__ << ": SQL sqlite3_bind_int error: " << ret << std::endl;
+            return -1;
+        }
+        ret = sqlite3_bind_blob(sql_statement_object, 3, static_cast<void *>(text), 5 * sizeof(char), SQLITE_STATIC);
         if (ret != SQLITE_OK) {
             std::cerr << __PRETTY_FUNCTION__ << ": SQL sqlite3_bind_int error: " << ret << std::endl;
             return -1;
@@ -206,7 +212,7 @@ int select_advanced()
     std::cout << std::endl << __PRETTY_FUNCTION__ << std::endl;
     int ret;
     sqlite3_stmt *sql_statement_object = nullptr;
-    const char *sql_statement = "SELECT id, name, number FROM generated_data WHERE number > ?1 ORDER BY number DESC LIMIT 10";
+    const char *sql_statement = "SELECT id, name, number, array FROM generated_data WHERE number > ?1 ORDER BY number DESC LIMIT 10";
 
     ret = sqlite3_prepare_v2(db_object, sql_statement, -1, &sql_statement_object, nullptr);
     if (ret != SQLITE_OK) {
@@ -245,7 +251,7 @@ int select_advanced()
                 break;
 
             case SQLITE_BLOB:
-                std::cout << "SQLITE_BLOB";
+                std::cout << static_cast<const char *>(sqlite3_column_blob(sql_statement_object, i)) << " (" << sqlite3_column_bytes(sql_statement_object, i) << " bytes)" ;
                 break;
 
             case SQLITE_NULL:
